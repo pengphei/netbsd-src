@@ -106,6 +106,13 @@ __KERNEL_RCSID(0, "$NetBSD: sunxi_platform.c,v 1.38 2019/11/24 10:27:37 jmcneill
 #define	SUN50I_H6_WDT_MODE	0x18
 #define	 SUN50I_H6_WDT_MODE_EN	__BIT(0)
 
+#define	SUNIV_WDT_BASE	0x01c20ca0
+#define	SUNIV_WDT_SIZE	0x20
+#define	SUNIV_WDT_CFG	0x14
+#define	 SUNIV_WDT_CFG_SYS	__BIT(0)
+#define	SUNIV_WDT_MODE	0x18
+#define	 SUNIV_WDT_MODE_EN	__BIT(0)
+
 extern struct arm32_bus_dma_tag arm_generic_dma_tag;
 extern struct bus_space arm_generic_bs_tag;
 extern struct bus_space arm_generic_a4x_bs_tag;
@@ -312,6 +319,15 @@ sun50i_h6_platform_bootstrap(void)
 	bus_space_map(bst, SUN50I_H6_WDT_BASE, SUN50I_H6_WDT_SIZE, 0, &reset_bsh);
 }
 
+static void
+suniv_platform_bootstrap(void)
+{
+	bus_space_tag_t bst = &sunxi_bs_tag;
+
+	sunxi_platform_bootstrap();
+	bus_space_map(bst, SUNIV_WDT_BASE, SUNIV_WDT_SIZE, 0, &reset_bsh);
+}
+
 #if defined(SOC_SUNXI_MC)
 static int
 cpu_enable_sun8i_a83t(int phandle)
@@ -406,6 +422,15 @@ sun50i_h6_platform_reset(void)
 
 	bus_space_write_4(bst, reset_bsh, SUN50I_H6_WDT_CFG, SUN50I_H6_WDT_CFG_SYS);
 	bus_space_write_4(bst, reset_bsh, SUN50I_H6_WDT_MODE, SUN50I_H6_WDT_MODE_EN);
+}
+
+static void
+suniv_platform_reset(void)
+{
+	bus_space_tag_t bst = &sunxi_bs_tag;
+
+	bus_space_write_4(bst, reset_bsh, SUNIV_WDT_CFG, SUNIV_WDT_CFG_SYS);
+	bus_space_write_4(bst, reset_bsh, SUNIV_WDT_MODE, SUNIV_WDT_MODE_EN);
 }
 
 static const struct arm_platform sun4i_platform = {
@@ -525,3 +550,17 @@ static const struct arm_platform sun50i_h6_platform = {
 };
 
 ARM_PLATFORM(sun50i_h6, "allwinner,sun50i-h6", &sun50i_h6_platform);
+
+static const struct arm_platform suniv_platform = {
+	.ap_devmap = sunxi_platform_devmap,
+	.ap_bootstrap = suniv_platform_bootstrap,
+	.ap_init_attach_args = sunxi_platform_init_attach_args,
+	.ap_device_register = sunxi_platform_device_register,
+	.ap_reset = suniv_platform_reset,
+	.ap_delay = gtmr_delay,
+	.ap_uart_freq = sunxi_platform_uart_freq,
+	.ap_mpstart = arm_fdt_cpu_mpstart,
+};
+
+ARM_PLATFORM(suniv_f1c100s, "allwinner,suniv-f1c100s", &suniv_platform);
+
