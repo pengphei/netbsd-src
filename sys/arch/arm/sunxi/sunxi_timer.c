@@ -93,6 +93,7 @@ __KERNEL_RCSID(0, "$NetBSD: sunxi_timer.c,v 1.7 2019/06/14 21:48:43 tnn Exp $");
 
 static const char * const compatible[] = {
 	"allwinner,sun4i-a10-timer",
+	"allwinner,suniv-f1c100s-timer",
 	NULL
 };
 
