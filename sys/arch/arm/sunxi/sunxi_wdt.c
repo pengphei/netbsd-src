@@ -83,6 +83,7 @@ enum sunxi_wdt_type {
 static const struct of_compat_data compat_data[] = {
 	{ "allwinner,sun4i-a10-wdt",	WDT_SUN4I },
 	{ "allwinner,sun6i-a31-wdt",	WDT_SUN6I },
+	{ "allwinner,suniv-f1c100s-wdt",	WDT_SUN6I },
 	{ NULL }
 };
 
