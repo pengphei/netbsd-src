@@ -49,6 +49,7 @@ static const char * compatible[] = {
 	"allwinner,sun50i-a64-system-control",
 	"allwinner,sun50i-h5-system-control",
 	"allwinner,sun50i-h6-system-control",
+	"allwinner,suniv-f1c100s-system-control",
 	NULL
 };
 
@@ -69,6 +70,9 @@ static const struct sunxi_sramc_area {
 	{ "allwinner,sun50i-a64-sram-c",
 	  "SRAM C",
 	  0x04, __BIT(24), SUNXI_SRAMC_F_SWAP },
+	{ "allwinner,suniv-f1c100s-sram-d",
+	  "SRAM D",
+	  0x04, __BIT(0), 0 },
 };
 
 struct sunxi_sramc_node {
