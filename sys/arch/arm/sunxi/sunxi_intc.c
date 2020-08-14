@@ -56,14 +56,30 @@ __KERNEL_RCSID(0, "$NetBSD: sunxi_intc.c,v 1.5 2020/01/07 10:20:07 skrll Exp $")
 #define	INTC_IRQ_PEND_REG(n)	(0x10 + ((n) * 4))
 #define	INTC_FIQ_PEND_REG(n)	(0x20 + ((n) * 4))
 #define	INTC_SEL_REG(n)		(0x30 + ((n) * 4))
-#define	INTC_EN_REG(n)		(0x40 + ((n) * 4))
-#define	INTC_MASK_REG(n)	(0x50 + ((n) * 4))
+#define	INTC_EN_REG(sc, n)		((sc->sc_en_reg_offset) + ((n) * 4))
+#define	INTC_MASK_REG(sc, n)	((sc->sc_mask_reg_offset) + ((n) * 4))
 #define	INTC_RESP_REG(n)	(0x60 + ((n) * 4))
 #define	INTC_FORCE_REG(n)	(0x70 + ((n) * 4))
 #define	INTC_SRC_PRIO_REG(n)	(0x80 + ((n) * 4))
 
+#define INTC_SUN4I_EN_REG_OFFSET 	0x40
+#define INTC_SUN4I_MASK_REG_OFFSET 	0x50
+#define INTC_SUNIV_EN_REG_OFFSET 	0x20
+#define INTC_SUNIV_MASK_REG_OFFSET 	0x30
+
 static const char * const compatible[] = {
 	"allwinner,sun4i-a10-ic",
+	"allwinner,suniv-f1c100s-ic",
+	NULL
+};
+
+static const char * const sun4i_a10_compatible[] = {
+	"allwinner,sun4i-a10-ic",
+	NULL
+};
+
+static const char * const suniv_f1c100s_compatible[] = {
+	"allwinner,suniv-f1c100s-ic",
 	NULL
 };
 
@@ -72,6 +88,8 @@ struct sunxi_intc_softc {
 	bus_space_tag_t sc_bst;
 	bus_space_handle_t sc_bsh;
 	int sc_phandle;
+	uint32_t sc_en_reg_offset;
+	uint32_t sc_mask_reg_offset;
 
 	uint32_t sc_enabled_irqs[INTC_MAX_GROUPS];
 
@@ -96,8 +114,8 @@ sunxi_intc_unblock_irqs(struct pic_softc *pic, size_t irqbase, uint32_t mask)
 
 	KASSERT((mask & sc->sc_enabled_irqs[group]) == 0);
 	sc->sc_enabled_irqs[group] |= mask;
-	INTC_WRITE(sc, INTC_EN_REG(group), sc->sc_enabled_irqs[group]);
-	INTC_WRITE(sc, INTC_MASK_REG(group), ~sc->sc_enabled_irqs[group]);
+	INTC_WRITE(sc, INTC_EN_REG(sc, group), sc->sc_enabled_irqs[group]);
+	INTC_WRITE(sc, INTC_MASK_REG(sc, group), ~sc->sc_enabled_irqs[group]);
 }
 
 static void
@@ -107,8 +125,8 @@ sunxi_intc_block_irqs(struct pic_softc *pic, size_t irqbase, uint32_t mask)
 	const u_int group = irqbase / 32;
 
 	sc->sc_enabled_irqs[group] &= ~mask;
-	INTC_WRITE(sc, INTC_EN_REG(group), sc->sc_enabled_irqs[group]);
-	INTC_WRITE(sc, INTC_MASK_REG(group), ~sc->sc_enabled_irqs[group]);
+	INTC_WRITE(sc, INTC_EN_REG(sc, group), sc->sc_enabled_irqs[group]);
+	INTC_WRITE(sc, INTC_MASK_REG(sc, group), ~sc->sc_enabled_irqs[group]);
 }
 
 static void
@@ -243,18 +261,29 @@ sunxi_intc_attach(device_t parent, device_t self, void *aux)
 		return;
 	}
 
+	if(of_match_compatible(faa->faa_phandle, suniv_f1c100s_compatible)) {
+		sc->sc_en_reg_offset = INTC_SUNIV_EN_REG_OFFSET;
+		sc->sc_mask_reg_offset = INTC_SUNIV_MASK_REG_OFFSET;
+	} else {
+		sc->sc_en_reg_offset = INTC_SUN4I_EN_REG_OFFSET;
+		sc->sc_mask_reg_offset = INTC_SUN4I_MASK_REG_OFFSET;
+	}
+
 	aprint_naive("\n");
 	aprint_normal(": Interrupt Controller\n");
 
 	/* Disable IRQs */
 	for (i = 0; i < INTC_MAX_GROUPS; i++) {
-		INTC_WRITE(sc, INTC_EN_REG(i), 0);
-		INTC_WRITE(sc, INTC_MASK_REG(i), ~0U);
+		INTC_WRITE(sc, INTC_EN_REG(sc, i), 0);
+		INTC_WRITE(sc, INTC_MASK_REG(sc, i), ~0U);
 		INTC_WRITE(sc, INTC_IRQ_PEND_REG(i),
 		    INTC_READ(sc, INTC_IRQ_PEND_REG(i)));
 	}
-	/* Disable user mode access to intc registers */
-	INTC_WRITE(sc, INTC_PROTECT_REG, INTC_PROTECT_EN);
+
+	/* Disable user mode access to intc registers, not available for suniv */
+	if(of_match_compatible(faa->faa_phandle, sun4i_a10_compatible)) {
+		INTC_WRITE(sc, INTC_PROTECT_REG, INTC_PROTECT_EN);
+	}
 
 	sc->sc_pic.pic_ops = &sunxi_intc_picops;
 	sc->sc_pic.pic_maxsources = INTC_MAX_SOURCES;
