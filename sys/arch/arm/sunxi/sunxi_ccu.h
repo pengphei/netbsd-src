@@ -114,6 +114,7 @@ struct sunxi_ccu_nkmp {
 #define	SUNXI_CCU_NKMP_FACTOR_P_POW2		__BIT(3)
 #define	SUNXI_CCU_NKMP_FACTOR_N_ZERO_IS_ONE	__BIT(4)
 #define	SUNXI_CCU_NKMP_FACTOR_P_X4		__BIT(5)
+#define	SUNXI_CCU_NKMP_MULTIPLY_BY_TWO		__BIT(6)
 };
 
 int	sunxi_ccu_nkmp_enable(struct sunxi_ccu_softc *,

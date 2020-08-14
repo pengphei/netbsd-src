@@ -129,6 +129,9 @@ sunxi_ccu_nkmp_get_rate(struct sunxi_ccu_softc *sc,
 	m++;
 	if (nkmp->flags & SUNXI_CCU_NKMP_DIVIDE_BY_TWO)
 		m *= 2;
+	
+	if (nkmp->flags & SUNXI_CCU_NKMP_MULTIPLY_BY_TWO)
+		n *= 2;
 
 	return (u_int)((uint64_t)rate * n * k) / (m * p);
 }
